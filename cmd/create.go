@@ -10,7 +10,7 @@ import (
 // Generate creates a new wallet
 func Generate() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		c.Before = func() { fmt.Println(ZARB) }
+		c.Before = func() { fmt.Println(header) }
 		c.Action = func() {
 			passphrase := PromptPassphrase("Passphrase: ", true)
 			w, err := wallet.CreateWallet(*path, passphrase, 0)

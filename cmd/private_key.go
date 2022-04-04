@@ -4,19 +4,18 @@ import (
 	"fmt"
 
 	cli "github.com/jawher/mow.cli"
-	"github.com/zarbchain/zarb-go/crypto/bls"
 	"github.com/zarbchain/zarb-wallet/wallet"
 )
 
 // GetPrivateKey returns the private key of an address
 func GetPrivateKey() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		addressOpt := c.String(cli.StringOpt{
-			Name: "a address",
+		addressArg := c.String(cli.StringArg{
+			Name: "ADDR",
 			Desc: "Address string",
 		})
 
-		c.Before = func() { fmt.Println(ZARB) }
+		c.Before = func() { fmt.Println(header) }
 		c.Action = func() {
 			passphrase := PromptPassphrase("Passphrase: ", false)
 			w, err := wallet.OpenWallet(*path)
@@ -25,14 +24,43 @@ func GetPrivateKey() func(c *cli.Cmd) {
 				return
 			}
 
-			prv, err := w.PrivateKey(passphrase, *addressOpt)
+			prv, err := w.PrivateKey(passphrase, *addressArg)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
 			PrintLine()
-			PrintDangerMsg("Private Key: \"%v\"", prv.String())
+			PrintDangerMsg("Private Key: \"%v\"", prv)
+		}
+	}
+}
+
+// GetPrivateKey returns the public key of an address
+func GetPublicKey() func(c *cli.Cmd) {
+	return func(c *cli.Cmd) {
+		addressArg := c.String(cli.StringArg{
+			Name: "ADDR",
+			Desc: "Address string",
+		})
+
+		c.Before = func() { fmt.Println(header) }
+		c.Action = func() {
+			passphrase := PromptPassphrase("Passphrase: ", false)
+			w, err := wallet.OpenWallet(*path)
+			if err != nil {
+				PrintDangerMsg(err.Error())
+				return
+			}
+
+			pub, err := w.PublicKey(passphrase, *addressArg)
+			if err != nil {
+				PrintDangerMsg(err.Error())
+				return
+			}
+
+			PrintLine()
+			PrintDangerMsg("Public Key: \"%v\"", pub)
 		}
 	}
 }
@@ -40,20 +68,17 @@ func GetPrivateKey() func(c *cli.Cmd) {
 // ImportPrivateKey imports a private key into the wallet
 func ImportPrivateKey() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		c.Before = func() { fmt.Println(ZARB) }
+		c.Before = func() { fmt.Println(header) }
 		c.Action = func() {
-			privKey := PromptInput("Private Key: ")
-			passphrase := PromptPassphrase("Wallet password: ", false)
+			prv := PromptInput("Private Key: ")
+
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
-			prv, err := bls.PrivateKeyFromString(privKey)
-			if err != nil {
-				PrintDangerMsg(err.Error())
-				return
-			}
+
+			passphrase := getPassphrase(w)
 			err = w.ImportPrivateKey(passphrase, prv)
 			if err != nil {
 				PrintDangerMsg(err.Error())

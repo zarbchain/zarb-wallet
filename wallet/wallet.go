@@ -157,6 +157,7 @@ func (w *Wallet) connectToRandomServer() error {
 
 	return errors.New("unable to connect to the servers")
 }
+
 func (w *Wallet) Path() string {
 	return w.path
 }
@@ -174,16 +175,32 @@ func (w *Wallet) saveToFile() error {
 	return util.WriteFile(w.path, bs)
 }
 
-func (w *Wallet) ImportPrivateKey(passphrase string, prv *bls.PrivateKey) error {
-	err := w.store.ImportPrivateKey(passphrase, prv)
+func (w *Wallet) ImportPrivateKey(passphrase string, prvStr string) error {
+	prv, err := bls.PrivateKeyFromString(prvStr)
+	if err != nil {
+		return err
+	}
+	err = w.store.ImportPrivateKey(passphrase, prv)
 	if err != nil {
 		return err
 	}
 	return w.saveToFile()
 }
 
-func (w *Wallet) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {
-	return w.store.PrivateKey(passphrase, addr)
+func (w *Wallet) PrivateKey(passphrase, addr string) (string, error) {
+	prv, err := w.store.PrivateKey(passphrase, addr)
+	if err != nil {
+		return "", err
+	}
+	return prv.String(), nil
+}
+
+func (w *Wallet) PublicKey(passphrase, addr string) (string, error) {
+	prv, err := w.store.PrivateKey(passphrase, addr)
+	if err != nil {
+		return "", err
+	}
+	return prv.PublicKey().String(), nil
 }
 
 func (w *Wallet) Mnemonic(passphrase string) string {
@@ -266,8 +283,11 @@ func (w *Wallet) MakeWithdrawTx(stampStr, seqStr, valAddrStr, accAddrStr, amount
 	if err != nil {
 		return nil, err
 	}
-	// TODO
-	fee := amount / 10000
+	fee, err := w.parsFee(amount, feeStr)
+	if err != nil {
+		return nil, err
+	}
+
 	tx := tx.NewWithdrawTx(stamp, seq, valAddr, accAddr, amount, fee, memo)
 	return tx, nil
 }
@@ -295,8 +315,10 @@ func (w *Wallet) MakeSendTx(stampStr, seqStr, senderStr, receiverStr, amountStr,
 		return nil, err
 	}
 
-	// TODO
-	fee := amount / 10000
+	fee, err := w.parsFee(amount, feeStr)
+	if err != nil {
+		return nil, err
+	}
 
 	tx := tx.NewSendTx(stamp, seq, sender, receiver, amount, fee, memo)
 	return tx, nil
@@ -354,7 +376,7 @@ func (w *Wallet) parsStamp(stampStr string) (hash.Stamp, error) {
 }
 
 func (w *Wallet) SignAndBroadcast(passphrase string, tx *tx.Tx) (string, error) {
-	prv, err := w.PrivateKey(passphrase, tx.Payload().Signer().String())
+	prv, err := w.store.PrivateKey(passphrase, tx.Payload().Signer().String())
 	if err != nil {
 		return "", err
 	}

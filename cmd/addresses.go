@@ -10,7 +10,7 @@ import (
 /// Addresses lists the wallet addresses
 func Addresses() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		c.Before = func() { fmt.Println(ZARB) }
+		c.Before = func() { fmt.Println(header) }
 		c.Action = func() {
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {

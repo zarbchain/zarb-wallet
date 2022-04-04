@@ -22,7 +22,9 @@ func main() {
 	app.Command("create", "Create a new wallet", Generate())
 	app.Command("recover", "Recover waller from mnemonic (seed phrase)", Recover())
 	app.Command("list_addresses", "List of wallet addresses", Addresses())
+	app.Command("get_pubkey", "Get public key of an address", GetPublicKey())
 	app.Command("get_privkey", "Get private key of an address", GetPrivateKey())
+	app.Command("get_seed", "Get seed phrase (mnemonic)", GetSeed())
 	app.Command("import_privkey", "Import a private key into wallet", ImportPrivateKey())
 	app.Command("tx", "Create, sign and publish a transaction", func(k *cli.Cmd) {
 		k.Command("bond", "Create, sign and publish a bond transaction", BondTx())
@@ -61,17 +63,21 @@ func addCommonTxOptions(c *cli.Cmd) (*string, *string, *string, *string) {
 }
 
 func signAndPublishTx(w *wallet.Wallet, trx *tx.Tx) {
-	PrintWarnMsg("THIS ACTION IS NOT REVERSABLE")
+	PrintWarnMsg("THIS ACTION IS NOT REVERSIBLE")
 	PromptConfirm("Do you want to continue? ")
 
-	passphrase := ""
-	if w.IsEncrypted() {
-		passphrase = PromptPassphrase("Wallet password: ", false)
-	}
-
+	passphrase := getPassphrase(w)
 	res, err := w.SignAndBroadcast(passphrase, trx)
 	if err != nil {
 		PrintDangerMsg("An error occurred: %s", err.Error())
 	}
 	PrintInfoMsg(res)
+}
+
+func getPassphrase(w *wallet.Wallet) string {
+	passphrase := ""
+	if w.IsEncrypted() {
+		passphrase = PromptPassphrase("Wallet password: ", false)
+	}
+	return passphrase
 }
