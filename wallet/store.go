@@ -62,13 +62,12 @@ func NewStore(passphrase string, net int) *Store {
 
 func createStoreFromMnemonic(passphrase string, mnemonic string, net int) *Store {
 	keyInfo := []byte{} // TODO, update for testnet
-	ikm, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
+	parentSeed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	exitOnErr(err)
-	parentKey, err := bls.PrivateKeyFromSeed(ikm, keyInfo)
+	parentKey, err := bls.PrivateKeyFromSeed(parentSeed, keyInfo)
 	exitOnErr(err)
 
 	e := newEncrypter(passphrase, net)
-
 	s := &Store{
 		Version:   1,
 		UUID:      uuid.New(),
@@ -83,8 +82,7 @@ func createStoreFromMnemonic(passphrase string, mnemonic string, net int) *Store
 			},
 		},
 	}
-
-	s.generateStartKeys(passphrase, 21)
+	s.generateStartKeys(parentSeed, parentKey.Bytes(), 21)
 	return s
 }
 
@@ -153,9 +151,9 @@ func (s *Store) deriveNewKeySeed(parentSeed []byte) []byte {
 
 /// Note:
 /// 1- Deriving Child key seeds from parent seed
-/// 2- Exposing any child key, should not expose parnet key or any other child keys
+/// 2- Exposing any child key, should not expose parent key or any other child keys
 
-func (s *Store) derivePrivayeKey(parentKey, keySeed []byte) *bls.PrivateKey {
+func (s *Store) derivePrivateKey(parentKey, keySeed []byte) *bls.PrivateKey {
 	keyInfo := []byte{} // TODO, update for testnet
 
 	// To derive a new key, we need:
@@ -191,8 +189,8 @@ func (s *Store) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {
 			case "BLS_KDF_CHAIN":
 				{
 					seed := a.Params.GetBytes("seed")
-					parnetKey := s.ParentKey(passphrase)
-					prv := s.derivePrivayeKey(parnetKey, seed)
+					parentKey := s.ParentKey(passphrase)
+					prv := s.derivePrivateKey(parentKey, seed)
 					return prv, nil
 				}
 			}
@@ -202,12 +200,10 @@ func (s *Store) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {
 	return nil, ErrAddressNotFound
 }
 
-func (s *Store) generateStartKeys(passphrase string, count int) {
-	parentSeed := s.ParentSeed(passphrase)
-	parnetKey := s.ParentKey(passphrase)
+func (s *Store) generateStartKeys(parentSeed, parentKey []byte, count int) {
 	for i := 0; i < count; i++ {
 		seed := s.deriveNewKeySeed(parentSeed)
-		prv := s.derivePrivayeKey(parnetKey, seed)
+		prv := s.derivePrivateKey(parentKey, seed)
 
 		a := address{}
 		a.Address = prv.PublicKey().Address().String()

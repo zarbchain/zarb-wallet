@@ -28,8 +28,6 @@ func WithdrawTx() func(c *cli.Cmd) {
 
 		c.Before = func() { fmt.Println(cmd.ZARB) }
 		c.Action = func() {
-			PrintLine()
-
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
 				PrintDangerMsg(err.Error())
@@ -59,6 +57,7 @@ func WithdrawTx() func(c *cli.Cmd) {
 				return
 			}
 
+			PrintLine()
 			PrintInfoMsg("You are going to sign and broadcast a withdraw transition to the network.")
 			PrintInfoMsg("Validator: %s", *fromOpt)
 			PrintInfoMsg("Account: %s", *toOpt)

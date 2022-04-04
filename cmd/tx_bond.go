@@ -29,8 +29,6 @@ func BondTx() func(c *cli.Cmd) {
 
 		c.Before = func() { fmt.Println(cmd.ZARB) }
 		c.Action = func() {
-			PrintLine()
-
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
 				PrintDangerMsg(err.Error())
@@ -60,6 +58,8 @@ func BondTx() func(c *cli.Cmd) {
 				PrintDangerMsg(err.Error())
 				return
 			}
+			
+			PrintLine()
 			PrintInfoMsg("You are going to sign and broadcast a bond transition to the network.")
 			PrintInfoMsg("Account: %s", *senderOpt)
 			PrintInfoMsg("Validator: %s", trx.Payload().(*payload.BondPayload).PublicKey.Address())

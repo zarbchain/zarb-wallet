@@ -12,8 +12,6 @@ func Generate() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
 		c.Before = func() { fmt.Println(ZARB) }
 		c.Action = func() {
-			PrintLine()
-
 			passphrase := PromptPassphrase("Passphrase: ", true)
 			w, err := wallet.CreateWallet(*path, passphrase, 0)
 			if err != nil {
@@ -23,10 +21,10 @@ func Generate() func(c *cli.Cmd) {
 
 			mnemonic := w.Mnemonic(passphrase)
 
+			PrintLine()
 			PrintSuccessMsg("Wallet created successfully at: %s", w.Path())
 			PrintInfoMsg("Seed: \"%v\"", mnemonic)
 			PrintWarnMsg("Please keep your seed in a safe place; if you lose it, you will not be able to restore your wallet.")
-
 		}
 	}
 }

@@ -12,14 +12,13 @@ func Addresses() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
 		c.Before = func() { fmt.Println(ZARB) }
 		c.Action = func() {
-			PrintLine()
-
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
+			PrintLine()
 			addrs := w.Addresses()
 			for _, addr := range addrs {
 				PrintInfoMsg("%s", addr)

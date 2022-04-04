@@ -39,15 +39,15 @@ func (e *argon2Encrypter) encryptWithParams(message string, iterations, memory u
 	iv := salt
 	d := aesCrypt([]byte(message), iv, cipherKey)
 
-	// Generate the checksum
-	checksum := sha256Checksum(cipherKey[16:32], d)
+	// Generate the mac
+	mac := sha256MAC(cipherKey[16:32], d)
 
 	params := newParams()
 	params.SetUint32("iterations", iterations)
 	params.SetUint32("memory", memory)
 	params.SetUint8("parallelism", parallelism)
 	params.SetBytes("salt", salt)
-	params.SetBytes("checksum", checksum)
+	params.SetBytes("mac", mac)
 
 	cipherText := base64.StdEncoding.EncodeToString(d)
 
@@ -60,7 +60,7 @@ func (e *argon2Encrypter) encryptWithParams(message string, iterations, memory u
 
 func (e *argon2Encrypter) decrypt(ct encrypted) (string, error) {
 	salt := ct.Params.GetBytes("salt")
-	checksum := ct.Params.GetBytes("checksum")
+	mac := ct.Params.GetBytes("mac")
 	iterations := ct.Params.GetUint32("iterations")
 	memory := ct.Params.GetUint32("memory")
 	parallelism := ct.Params.GetUint8("parallelism")
@@ -69,7 +69,9 @@ func (e *argon2Encrypter) decrypt(ct encrypted) (string, error) {
 	d, err := base64.StdEncoding.DecodeString(ct.CipherText)
 	exitOnErr(err)
 
-	if !safeCmp(checksum, sha256Checksum(cipherKey[16:32], d)) {
+	// Using MAC to heck if the password is correct
+	// https: //en.wikipedia.org/wiki/Authenticated_encryption#Encrypt-then-MAC_(EtM)
+	if !safeCmp(mac, sha256MAC(cipherKey[16:32], d)) {
 		return "", errors.New("invalid checksum")
 	}
 

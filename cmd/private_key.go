@@ -18,8 +18,6 @@ func GetPrivateKey() func(c *cli.Cmd) {
 
 		c.Before = func() { fmt.Println(ZARB) }
 		c.Action = func() {
-			PrintLine()
-
 			passphrase := PromptPassphrase("Passphrase: ", false)
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
@@ -33,6 +31,7 @@ func GetPrivateKey() func(c *cli.Cmd) {
 				return
 			}
 
+			PrintLine()
 			PrintDangerMsg("Private Key: \"%v\"", prv.String())
 		}
 	}
@@ -43,8 +42,6 @@ func ImportPrivateKey() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
 		c.Before = func() { fmt.Println(ZARB) }
 		c.Action = func() {
-			PrintLine()
-
 			privKey := PromptInput("Private Key: ")
 			passphrase := PromptPassphrase("Wallet password: ", false)
 			w, err := wallet.OpenWallet(*path)
@@ -63,6 +60,7 @@ func ImportPrivateKey() func(c *cli.Cmd) {
 				return
 			}
 
+			PrintLine()
 			PrintSuccessMsg("Private Key imported")
 		}
 	}

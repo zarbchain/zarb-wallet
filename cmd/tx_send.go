@@ -28,8 +28,6 @@ func SendTx() func(c *cli.Cmd) {
 
 		c.Before = func() { fmt.Println(cmd.ZARB) }
 		c.Action = func() {
-			PrintLine()
-
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
 				PrintDangerMsg(err.Error())
@@ -57,6 +55,7 @@ func SendTx() func(c *cli.Cmd) {
 				return
 			}
 
+			PrintLine()
 			PrintInfoMsg("You are going to sign and broadcast a send transition to the network.")
 			PrintInfoMsg("From: %s", *fromArg)
 			PrintInfoMsg("To: %s", *toArg)

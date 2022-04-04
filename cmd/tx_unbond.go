@@ -18,8 +18,6 @@ func UnbondTx() func(c *cli.Cmd) {
 
 		c.Before = func() { fmt.Println(cmd.ZARB) }
 		c.Action = func() {
-			PrintLine()
-
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
 				PrintDangerMsg(err.Error())
@@ -38,6 +36,8 @@ func UnbondTx() func(c *cli.Cmd) {
 				PrintDangerMsg(err.Error())
 				return
 			}
+
+			PrintLine()
 			PrintInfoMsg("You are going to sign and broadcast an unbond transition to the network.")
 			PrintInfoMsg("Validator: %s", *valOpt)
 
