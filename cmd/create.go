@@ -12,10 +12,9 @@ func Generate() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
 		c.Before = func() { fmt.Println(ZARB) }
 		c.Action = func() {
+			PrintLine()
+
 			passphrase := PromptPassphrase("Passphrase: ", true)
-
-			fmt.Println()
-
 			w, err := wallet.CreateWallet(*path, passphrase, 0)
 			if err != nil {
 				PrintDangerMsg(err.Error())

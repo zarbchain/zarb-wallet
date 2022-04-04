@@ -7,7 +7,6 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"hash/crc32"
 	"time"
 
@@ -70,7 +69,7 @@ func createStoreFromMnemonic(passphrase string, mnemonic string, net int) *Store
 
 	s := &Store{
 		Version:   1,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().Round(time.Second),
 		Network:   net,
 		Encrypted: len(passphrase) != 0,
 		Vault: &vault{
@@ -92,12 +91,10 @@ func (s *Store) calcVaultCRC() uint32 {
 	return crc32.ChecksumIEEE(d)
 }
 
-func (s *Store) Addresses() []crypto.Address {
-	addrs := make([]crypto.Address, len(s.Vault.Addresses))
+func (s *Store) Addresses() []string {
+	addrs := make([]string, len(s.Vault.Addresses))
 	for i, a := range s.Vault.Addresses {
-		addr, err := crypto.AddressFromString(a.Address)
-		exitOnErr(err)
-		addrs[i] = addr
+		addrs[i] = a.Address
 	}
 
 	return addrs
@@ -105,7 +102,7 @@ func (s *Store) Addresses() []crypto.Address {
 
 func (s *Store) ImportPrivateKey(passphrase string, prv *bls.PrivateKey) error {
 	if s.Contains(prv.PublicKey().Address()) {
-		return errors.New("address already exists")
+		return ErrAddressExists
 	}
 
 	e := newEncrypter(passphrase, s.Network)
@@ -199,7 +196,7 @@ func (s *Store) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {
 		}
 	}
 
-	return nil, errors.New("address not found")
+	return nil, ErrAddressNotFound
 }
 
 func (s *Store) generateStartKeys(passphrase string, count int) {

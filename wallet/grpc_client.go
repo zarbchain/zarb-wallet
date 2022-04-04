@@ -30,16 +30,26 @@ func (c *GrpcClient) GetStamp() (hash.Stamp, error) {
 	if err != nil {
 		return hash.Stamp{}, err
 	}
-	return hash.StampFromString(string(info.LastBlockHash))
+	h, _ := hash.FromBytes(info.LastBlockHash)
+	return h.Stamp(), nil
 }
 
-func (c *GrpcClient) GetSequence(addr crypto.Address) (int32, error) {
+func (c *GrpcClient) GetAccountSequence(addr crypto.Address) (int32, error) {
 	acc, err := c.client.GetAccount(context.Background(), &zarb.AccountRequest{Address: addr.Bytes()})
 	if err != nil {
 		return 0, err
 	}
 
 	return acc.Account.Sequence + 1, nil
+}
+
+func (c *GrpcClient) GetValidatorSequence(addr crypto.Address) (int32, error) {
+	val, err := c.client.GetValidator(context.Background(), &zarb.ValidatorRequest{Address: addr.Bytes()})
+	if err != nil {
+		return 0, err
+	}
+
+	return val.Validator.Sequence + 1, nil
 }
 
 func (c *GrpcClient) SendTx(payload []byte) (string, error) {

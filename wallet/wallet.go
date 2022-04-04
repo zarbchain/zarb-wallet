@@ -9,6 +9,7 @@ import (
 
 	"github.com/zarbchain/zarb-go/crypto"
 	"github.com/zarbchain/zarb-go/crypto/bls"
+	"github.com/zarbchain/zarb-go/crypto/hash"
 	"github.com/zarbchain/zarb-go/tx"
 	"github.com/zarbchain/zarb-go/util"
 )
@@ -25,6 +26,14 @@ var (
 	/// ErrWalletExits describes an error in which the network is not
 	/// valid
 	ErrInvalidNetwork = errors.New("invalid network")
+
+	/// ErrWalletExits describes an error in which the address doesn't
+	/// exist in wallet
+	ErrAddressNotFound = errors.New("address not found")
+
+	/// ErrWalletExits describes an error in which the address already
+	/// exist in wallet
+	ErrAddressExists = errors.New("address already exists")
 )
 
 type Wallet struct {
@@ -159,7 +168,7 @@ func (w *Wallet) IsEncrypted() bool {
 func (w *Wallet) saveToFile() error {
 	w.store.VaultCRC = w.store.calcVaultCRC()
 
-	bs, err := json.Marshal(w.store)
+	bs, err := json.MarshalIndent(w.store, "  ", "  ")
 	exitOnErr(err)
 
 	return util.WriteFile(w.path, bs)
@@ -181,11 +190,89 @@ func (w *Wallet) Mnemonic(passphrase string) string {
 	return w.store.Mnemonic(passphrase)
 }
 
-func (w *Wallet) Addresses() []crypto.Address {
+func (w *Wallet) Addresses() []string {
 	return w.store.Addresses()
 }
 
-func (w *Wallet) MakeSendTx(senderStr, receiverStr, amountStr string) (*tx.Tx, error) {
+/// MakeBondTx creates a new bond transaction based on the given parameters
+func (w *Wallet) MakeBondTx(stampStr, seqStr, senderStr, valPubStr, stakeStr, memo string) (*tx.Tx, error) {
+	sender, err := crypto.AddressFromString(senderStr)
+	if err != nil {
+		return nil, err
+	}
+	valPub, err := bls.PublicKeyFromString(valPubStr)
+	if err != nil {
+		return nil, err
+	}
+	stake, err := strconv.ParseInt(stakeStr, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	stamp, err := w.parsStamp(stampStr)
+	if err != nil {
+		return nil, err
+	}
+	seq, err := w.parsAccSeq(sender, seqStr)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO
+	fee := stake / 10000
+
+	tx := tx.NewBondTx(stamp, seq, sender, valPub, stake, fee, memo)
+	return tx, nil
+}
+
+/// MakeUnbondTx creates a new unbond transaction based on the given parameters
+func (w *Wallet) MakeUnbondTx(stampStr, seqStr, addrStr, memo string) (*tx.Tx, error) {
+	addr, err := crypto.AddressFromString(addrStr)
+	if err != nil {
+		return nil, err
+	}
+	stamp, err := w.parsStamp(stampStr)
+	if err != nil {
+		return nil, err
+	}
+	seq, err := w.parsValSeq(addr, seqStr)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := tx.NewUnbondTx(stamp, seq, addr, memo)
+	return tx, nil
+}
+
+/// MakeWithdrawTx creates a new unbond transaction based on the given parameters
+func (w *Wallet) MakeWithdrawTx(stampStr, seqStr, valAddrStr, accAddrStr, amountStr, memo string) (*tx.Tx, error) {
+	valAddr, err := crypto.AddressFromString(valAddrStr)
+	if err != nil {
+		return nil, err
+	}
+	accAddr, err := crypto.AddressFromString(accAddrStr)
+	if err != nil {
+		return nil, err
+	}
+	stamp, err := w.parsStamp(stampStr)
+	if err != nil {
+		return nil, err
+	}
+	seq, err := w.parsValSeq(valAddr, seqStr)
+	if err != nil {
+		return nil, err
+	}
+	amount, err := strconv.ParseInt(amountStr, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	// TODO
+	fee := amount / 10000
+	tx := tx.NewWithdrawTx(stamp, seq, valAddr, accAddr, amount, fee, memo)
+	return tx, nil
+}
+
+/// MakeSendTx creates a new send transaction based on the given parameters
+func (w *Wallet) MakeSendTx(stampStr, seqStr, senderStr, receiverStr, amountStr, memo string) (*tx.Tx, error) {
 	sender, err := crypto.AddressFromString(senderStr)
 	if err != nil {
 		return nil, err
@@ -194,18 +281,15 @@ func (w *Wallet) MakeSendTx(senderStr, receiverStr, amountStr string) (*tx.Tx, e
 	if err != nil {
 		return nil, err
 	}
-
 	amount, err := strconv.ParseInt(amountStr, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-
-	stamp, err := w.client.GetStamp()
+	stamp, err := w.parsStamp(stampStr)
 	if err != nil {
 		return nil, err
 	}
-
-	seq, err := w.client.GetSequence(sender)
+	seq, err := w.parsAccSeq(sender, seqStr)
 	if err != nil {
 		return nil, err
 	}
@@ -213,12 +297,53 @@ func (w *Wallet) MakeSendTx(senderStr, receiverStr, amountStr string) (*tx.Tx, e
 	// TODO
 	fee := amount / 10000
 
-	tx := tx.NewSendTx(stamp, seq, sender, receiver, amount, fee, "")
-
+	tx := tx.NewSendTx(stamp, seq, sender, receiver, amount, fee, memo)
 	return tx, nil
 }
 
-func (w *Wallet) BroadcastSendTx(tx *tx.Tx) (string, error) {
+func (w *Wallet) parsAccSeq(signer crypto.Address, seqStr string) (int32, error) {
+	if seqStr != "" {
+		seq, err := strconv.ParseInt(seqStr, 10, 32)
+		if err != nil {
+			return -1, err
+		}
+		return int32(seq), nil
+	}
+
+	return w.client.GetAccountSequence(signer)
+}
+
+func (w *Wallet) parsValSeq(signer crypto.Address, seqStr string) (int32, error) {
+	if seqStr != "" {
+		seq, err := strconv.ParseInt(seqStr, 10, 32)
+		if err != nil {
+			return -1, err
+		}
+		return int32(seq), nil
+	}
+
+	return w.client.GetValidatorSequence(signer)
+}
+
+func (w *Wallet) parsStamp(stampStr string) (hash.Stamp, error) {
+	if stampStr != "" {
+		stamp, err := hash.StampFromString(stampStr)
+		if err != nil {
+			return hash.UndefHash.Stamp(), err
+		}
+		return stamp, nil
+	}
+	return w.client.GetStamp()
+}
+
+func (w *Wallet) SignAndBroadcast(passphrase string, tx *tx.Tx) (string, error) {
+	prv, err := w.PrivateKey(passphrase, tx.Payload().Signer().String())
+	if err != nil {
+		return "", err
+	}
+
+	signer := crypto.NewSigner(prv)
+	signer.SignMsg(tx)
 	b, err := tx.Bytes()
 	if err != nil {
 		return "", err

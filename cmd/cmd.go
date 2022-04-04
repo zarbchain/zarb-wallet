@@ -129,6 +129,16 @@ func PromptPassphrase(prompt string, confirmation bool) string {
 	return passphrase
 }
 
+// PromptConfirm prompts user to confirm the operation
+func PromptConfirm(prompt string) bool {
+	input, err := Stdin.PromptConfirm(prompt)
+	if err != nil {
+		PrintErrorMsg("Failed to read input: %v", err)
+		os.Exit(1)
+	}
+	return input
+}
+
 // Promptlabel prompts for an input string
 func PromptInput(prompt string) string {
 	input, err := Stdin.PromptInput(prompt)

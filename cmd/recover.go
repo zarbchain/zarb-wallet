@@ -12,10 +12,9 @@ func Recover() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
 		c.Before = func() { fmt.Println(ZARB) }
 		c.Action = func() {
+			PrintLine()
+
 			mnemonic := PromptInput("Seed: ")
-
-			fmt.Println()
-
 			w, err := wallet.RecoverWallet(*path, mnemonic, 0)
 			if err != nil {
 				PrintDangerMsg(err.Error())
