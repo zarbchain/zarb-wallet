@@ -10,11 +10,11 @@ import (
 
 func UnbondTx() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		valOpt := c.String(cli.StringOpt{
-			Name: "val",
+		valArg := c.String(cli.StringArg{
+			Name: "ADDR",
 			Desc: "Validator's address",
 		})
-		stampOpt, seqOpt, memoOpt := addCommonTxOptions(c)
+		stampOpt, seqOpt, memoOpt, _ := addCommonTxOptions(c)
 
 		c.Before = func() { fmt.Println(cmd.ZARB) }
 		c.Action = func() {
@@ -24,22 +24,15 @@ func UnbondTx() func(c *cli.Cmd) {
 				return
 			}
 
-			// ---
-			if *valOpt == "" {
-				cmd.PrintWarnMsg("Sender address is not defined.")
-				c.PrintHelp()
-				return
-			}
-
-			trx, err := w.MakeUnbondTx(*stampOpt, *seqOpt, *valOpt, *memoOpt)
+			trx, err := w.MakeUnbondTx(*stampOpt, *seqOpt, *valArg, *memoOpt)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
 			PrintLine()
-			PrintInfoMsg("You are going to sign and broadcast an unbond transition to the network.")
-			PrintInfoMsg("Validator: %s", *valOpt)
+			PrintInfoMsg("You are going to sign and broadcast an Unbond transition to the network:")
+			PrintInfoMsg("Validator: %s", *valArg)
 
 			signAndPublishTx(w, trx)
 

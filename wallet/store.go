@@ -186,7 +186,7 @@ func (s *Store) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {
 					exitOnErr(err)
 					return prv, nil
 				}
-			case "BLS_KDF_CHAIN":
+			case "BLS-KDF-CHAIN":
 				{
 					seed := a.Params.GetBytes("seed")
 					parentKey := s.ParentKey(passphrase)
@@ -209,7 +209,7 @@ func (s *Store) generateStartKeys(parentSeed, parentKey []byte, count int) {
 		a.Address = prv.PublicKey().Address().String()
 		a.Params = newParams()
 		a.Params.SetBytes("seed", seed)
-		a.Method = "BLS_KDF_CHAIN"
+		a.Method = "BLS-KDF-CHAIN"
 		s.Vault.Addresses = append(s.Vault.Addresses, a)
 	}
 }

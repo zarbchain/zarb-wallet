@@ -10,21 +10,21 @@ import (
 
 func WithdrawTx() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		fromOpt := c.String(cli.StringOpt{
-			Name: "from",
+		fromArg := c.String(cli.StringArg{
+			Name: "FROM",
 			Desc: "withdraw from Validator address",
 		})
 
-		toOpt := c.String(cli.StringOpt{
-			Name: "to",
-			Desc: "Deposit to address",
+		toArg := c.String(cli.StringArg{
+			Name: "TO",
+			Desc: "Deposit to account address",
 		})
 
-		amountOpt := c.String(cli.StringOpt{
-			Name: "amount",
+		amountArg := c.String(cli.StringArg{
+			Name: "AMOUNT",
 			Desc: "The amount to be transferred",
 		})
-		stampOpt, seqOpt, memoOpt := addCommonTxOptions(c)
+		stampOpt, seqOpt, memoOpt, feeOpt := addCommonTxOptions(c)
 
 		c.Before = func() { fmt.Println(cmd.ZARB) }
 		c.Action = func() {
@@ -34,34 +34,17 @@ func WithdrawTx() func(c *cli.Cmd) {
 				return
 			}
 
-			// ---
-			if *amountOpt == "" {
-				cmd.PrintWarnMsg("Stake is not defined.")
-				c.PrintHelp()
-				return
-			}
-			if *fromOpt == "" {
-				cmd.PrintWarnMsg("Validator address is not defined.")
-				c.PrintHelp()
-				return
-			}
-			if *toOpt == "" {
-				cmd.PrintWarnMsg("Account address is not defined.")
-				c.PrintHelp()
-				return
-			}
-
-			trx, err := w.MakeWithdrawTx(*stampOpt, *seqOpt, *fromOpt, *toOpt, *amountOpt, *memoOpt)
+			trx, err := w.MakeWithdrawTx(*stampOpt, *seqOpt, *fromArg, *toArg, *amountArg, *feeOpt, *memoOpt)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
 			PrintLine()
-			PrintInfoMsg("You are going to sign and broadcast a withdraw transition to the network.")
-			PrintInfoMsg("Validator: %s", *fromOpt)
-			PrintInfoMsg("Account: %s", *toOpt)
-			PrintInfoMsg("Amount: %s", *amountOpt)
+			PrintInfoMsg("You are going to sign and broadcast a Withdraw transition to the network.")
+			PrintInfoMsg("Validator: %s", *fromArg)
+			PrintInfoMsg("Account: %s", *toArg)
+			PrintInfoMsg("Amount: %s", *amountArg)
 
 			signAndPublishTx(w, trx)
 		}

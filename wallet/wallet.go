@@ -195,7 +195,7 @@ func (w *Wallet) Addresses() []string {
 }
 
 /// MakeBondTx creates a new bond transaction based on the given parameters
-func (w *Wallet) MakeBondTx(stampStr, seqStr, senderStr, valPubStr, stakeStr, memo string) (*tx.Tx, error) {
+func (w *Wallet) MakeBondTx(stampStr, seqStr, senderStr, valPubStr, stakeStr, feeStr, memo string) (*tx.Tx, error) {
 	sender, err := crypto.AddressFromString(senderStr)
 	if err != nil {
 		return nil, err
@@ -216,9 +216,10 @@ func (w *Wallet) MakeBondTx(stampStr, seqStr, senderStr, valPubStr, stakeStr, me
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO
-	fee := stake / 10000
+	fee, err := w.parsFee(stake, feeStr)
+	if err != nil {
+		return nil, err
+	}
 
 	tx := tx.NewBondTx(stamp, seq, sender, valPub, stake, fee, memo)
 	return tx, nil
@@ -244,7 +245,7 @@ func (w *Wallet) MakeUnbondTx(stampStr, seqStr, addrStr, memo string) (*tx.Tx, e
 }
 
 /// MakeWithdrawTx creates a new unbond transaction based on the given parameters
-func (w *Wallet) MakeWithdrawTx(stampStr, seqStr, valAddrStr, accAddrStr, amountStr, memo string) (*tx.Tx, error) {
+func (w *Wallet) MakeWithdrawTx(stampStr, seqStr, valAddrStr, accAddrStr, amountStr, feeStr, memo string) (*tx.Tx, error) {
 	valAddr, err := crypto.AddressFromString(valAddrStr)
 	if err != nil {
 		return nil, err
@@ -272,7 +273,7 @@ func (w *Wallet) MakeWithdrawTx(stampStr, seqStr, valAddrStr, accAddrStr, amount
 }
 
 /// MakeSendTx creates a new send transaction based on the given parameters
-func (w *Wallet) MakeSendTx(stampStr, seqStr, senderStr, receiverStr, amountStr, memo string) (*tx.Tx, error) {
+func (w *Wallet) MakeSendTx(stampStr, seqStr, senderStr, receiverStr, amountStr, feeStr, memo string) (*tx.Tx, error) {
 	sender, err := crypto.AddressFromString(senderStr)
 	if err != nil {
 		return nil, err
@@ -311,6 +312,22 @@ func (w *Wallet) parsAccSeq(signer crypto.Address, seqStr string) (int32, error)
 	}
 
 	return w.client.GetAccountSequence(signer)
+}
+
+func (w *Wallet) parsFee(amount int64, feeStr string) (int64, error) {
+	if feeStr != "" {
+		fee, err := strconv.ParseInt(feeStr, 10, 64)
+		if err != nil {
+			return -1, err
+		}
+		return fee, nil
+	}
+
+	fee := amount / 10000
+	if fee < 10000 {
+		fee = 10000
+	}
+	return fee, nil
 }
 
 func (w *Wallet) parsValSeq(signer crypto.Address, seqStr string) (int32, error) {

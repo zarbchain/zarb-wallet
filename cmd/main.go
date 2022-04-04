@@ -36,7 +36,7 @@ func main() {
 	}
 }
 
-func addCommonTxOptions(c *cli.Cmd) (*string, *string, *string) {
+func addCommonTxOptions(c *cli.Cmd) (*string, *string, *string, *string) {
 	stampOpt := c.String(cli.StringOpt{
 		Name: "stamp",
 		Desc: "Transaction stamp, if not specified will query from gRPC server",
@@ -48,11 +48,16 @@ func addCommonTxOptions(c *cli.Cmd) (*string, *string, *string) {
 	})
 	memoOpt := c.String(cli.StringOpt{
 		Name:  "memo",
-		Desc:  "Transaction memo is maximum should be 64 character (optional)",
+		Desc:  "Transaction memo, maximum should be 64 character (optional)",
+		Value: "",
+	})
+	feeOpt := c.String(cli.StringOpt{
+		Name:  "fee",
+		Desc:  "Transaction fee, if not specified will calculate automatically",
 		Value: "",
 	})
 
-	return stampOpt, seqOpt, memoOpt
+	return stampOpt, seqOpt, memoOpt, feeOpt
 }
 
 func signAndPublishTx(w *wallet.Wallet, trx *tx.Tx) {

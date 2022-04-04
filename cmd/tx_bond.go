@@ -11,21 +11,21 @@ import (
 
 func BondTx() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		senderOpt := c.String(cli.StringOpt{
-			Name: "sender",
+		senderArg := c.String(cli.StringArg{
+			Name: "FROM",
 			Desc: "Sender account address",
 		})
 
-		pubOpt := c.String(cli.StringOpt{
-			Name: "pub",
+		pubArg := c.String(cli.StringArg{
+			Name: "TO",
 			Desc: "Validator public key",
 		})
 
-		stakeOpt := c.String(cli.StringOpt{
-			Name: "stake",
+		stakeArg := c.String(cli.StringArg{
+			Name: "STAKE",
 			Desc: "Stake amount",
 		})
-		stampOpt, seqOpt, memoOpt := addCommonTxOptions(c)
+		stampOpt, seqOpt, memoOpt, feeOpt := addCommonTxOptions(c)
 
 		c.Before = func() { fmt.Println(cmd.ZARB) }
 		c.Action = func() {
@@ -35,35 +35,17 @@ func BondTx() func(c *cli.Cmd) {
 				return
 			}
 
-			// ---
-			if *stakeOpt == "" {
-				cmd.PrintWarnMsg("Stake is not defined.")
-				c.PrintHelp()
-				return
-			}
-
-			if *senderOpt == "" {
-				cmd.PrintWarnMsg("Sender address is not defined.")
-				c.PrintHelp()
-				return
-			}
-			if *pubOpt == "" {
-				cmd.PrintWarnMsg("Public key is not defined.")
-				c.PrintHelp()
-				return
-			}
-
-			trx, err := w.MakeBondTx(*stampOpt, *seqOpt, *senderOpt, *pubOpt, *stakeOpt, *memoOpt)
+			trx, err := w.MakeBondTx(*stampOpt, *seqOpt, *senderArg, *pubArg, *stakeArg, *feeOpt, *memoOpt)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
-			
+
 			PrintLine()
 			PrintInfoMsg("You are going to sign and broadcast a bond transition to the network.")
-			PrintInfoMsg("Account: %s", *senderOpt)
+			PrintInfoMsg("Account: %s", *senderArg)
 			PrintInfoMsg("Validator: %s", trx.Payload().(*payload.BondPayload).PublicKey.Address())
-			PrintInfoMsg("Stake: %s", *stakeOpt)
+			PrintInfoMsg("Stake: %s", *stakeArg)
 
 			signAndPublishTx(w, trx)
 		}

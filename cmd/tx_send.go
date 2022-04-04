@@ -11,12 +11,12 @@ import (
 func SendTx() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
 		fromArg := c.String(cli.StringArg{
-			Name: "SENDER",
+			Name: "FROM",
 			Desc: "Sender address",
 		})
 
 		toArg := c.String(cli.StringArg{
-			Name: "RECEIVER",
+			Name: "TO",
 			Desc: "Receiver address",
 		})
 
@@ -24,7 +24,7 @@ func SendTx() func(c *cli.Cmd) {
 			Name: "AMOUNT",
 			Desc: "The amount to be transferred",
 		})
-		stampOpt, seqOpt, memoOpt := addCommonTxOptions(c)
+		stampOpt, seqOpt, memoOpt, feeOpt := addCommonTxOptions(c)
 
 		c.Before = func() { fmt.Println(cmd.ZARB) }
 		c.Action = func() {
@@ -33,30 +33,15 @@ func SendTx() func(c *cli.Cmd) {
 				PrintDangerMsg(err.Error())
 				return
 			}
-			if *amountArg == "" {
-				cmd.PrintWarnMsg("Stake is not defined.")
-				c.PrintHelp()
-				return
-			}
-			if *fromArg == "" {
-				cmd.PrintWarnMsg("Sender address is not defined.")
-				c.PrintHelp()
-				return
-			}
-			if *toArg == "" {
-				cmd.PrintWarnMsg("Receiver is not defined.")
-				c.PrintHelp()
-				return
-			}
 
-			trx, err := w.MakeSendTx(*stampOpt, *seqOpt, *fromArg, *toArg, *amountArg, *memoOpt)
+			trx, err := w.MakeSendTx(*stampOpt, *seqOpt, *fromArg, *toArg, *amountArg, *feeOpt, *memoOpt)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
 			PrintLine()
-			PrintInfoMsg("You are going to sign and broadcast a send transition to the network.")
+			PrintInfoMsg("You are going to sign and broadcast a Send transition to the network:")
 			PrintInfoMsg("From: %s", *fromArg)
 			PrintInfoMsg("To: %s", *toArg)
 			PrintInfoMsg("Amount: %s", *amountArg)
