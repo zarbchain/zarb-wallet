@@ -27,7 +27,7 @@ func setup(t *testing.T) {
 func reopenWallet(t *testing.T) {
 	w, err := OpenWallet(tWallet.path)
 	assert.NoError(t, err)
-
+	assert.Equal(t, tWallet.store.UUID, w.store.UUID, "UUID is changed")
 	tWallet = w
 }
 

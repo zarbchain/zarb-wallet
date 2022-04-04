@@ -3,6 +3,7 @@ module github.com/zarbchain/zarb-wallet
 go 1.18
 
 require (
+	github.com/google/uuid v1.3.0
 	github.com/jawher/mow.cli v1.2.0
 	github.com/peterh/liner v1.2.1
 	github.com/stretchr/testify v1.7.0

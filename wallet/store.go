@@ -10,6 +10,7 @@ import (
 	"hash/crc32"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/zarbchain/zarb-go/crypto"
 	"github.com/zarbchain/zarb-go/crypto/bls"
@@ -17,6 +18,7 @@ import (
 
 type Store struct {
 	Version   int       `json:"version"`
+	UUID      uuid.UUID `json:"uuid"`
 	CreatedAt time.Time `json:"created_at"`
 	Network   int       `json:"network"`
 	Encrypted bool      `json:"encrypted"`
@@ -69,7 +71,8 @@ func createStoreFromMnemonic(passphrase string, mnemonic string, net int) *Store
 
 	s := &Store{
 		Version:   1,
-		CreatedAt: time.Now().Round(time.Second),
+		UUID:      uuid.New(),
+		CreatedAt: time.Now().Round(time.Second).UTC(),
 		Network:   net,
 		Encrypted: len(passphrase) != 0,
 		Vault: &vault{
