@@ -16,15 +16,18 @@ func Generate() func(c *cli.Cmd) {
 
 			fmt.Println()
 
-			wallet, err := wallet.CreateWallet(*path, passphrase, 0)
+			w, err := wallet.CreateWallet(*path, passphrase, 0)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
-			mnemonic := wallet.Mnemonic(passphrase)
+			mnemonic := w.Mnemonic(passphrase)
 
-			PrintSuccessMsg("mnemonic: \"%v\"", mnemonic)
+			PrintSuccessMsg("Wallet created successfully at: %s", w.Path())
+			PrintInfoMsg("Seed: \"%v\"", mnemonic)
+			PrintWarnMsg("Please keep your seed in a safe place; if you lose it, you will not be able to restore your wallet.")
+
 		}
 	}
 }

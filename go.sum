@@ -973,8 +973,8 @@ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
-github.com/zarbchain/zarb-go v0.9.1-0.20220403164918-d5404772224f h1:pVPbCFHlRLEPg/LiqUc3oAehMTJNMfTmQNqbVteSt+c=
-github.com/zarbchain/zarb-go v0.9.1-0.20220403164918-d5404772224f/go.mod h1:9+q0BN1x2fWSDuqQLky1gZJYs3gN+6CTVrAGRDKfiIk=
+github.com/zarbchain/zarb-go v0.9.1-0.20220404031026-7ee71e53551e h1:Cbp+HdWVaWn6WSvCO91fRi8Fr0mjtTm50XCLPncdJWc=
+github.com/zarbchain/zarb-go v0.9.1-0.20220404031026-7ee71e53551e/go.mod h1:9+q0BN1x2fWSDuqQLky1gZJYs3gN+6CTVrAGRDKfiIk=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738/go.mod h1:dnLIgRNXwCJa5e+c6mIZCrds/GIG4ncV9HhK5PX7jPg=
 go.opencensus.io v0.18.0/go.mod h1:vKdFvxhtzZ9onBp9VKHK8z/sRpBMnKAsufL7wlDrCOA=

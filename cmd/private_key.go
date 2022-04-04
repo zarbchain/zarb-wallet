@@ -34,7 +34,7 @@ func GetPrivateKey() func(c *cli.Cmd) {
 				return
 			}
 
-			PrintSuccessMsg("Private Key: \"%v\"", prv.String())
+			PrintDangerMsg("Private Key: \"%v\"", prv.String())
 		}
 	}
 }

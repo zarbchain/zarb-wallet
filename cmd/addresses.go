@@ -22,7 +22,6 @@ func Addresses() func(c *cli.Cmd) {
 			for _, addr := range addrs {
 				PrintInfoMsg("%s", addr.String())
 			}
-
 		}
 	}
 }

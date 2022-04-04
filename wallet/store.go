@@ -60,9 +60,10 @@ func NewStore(passphrase string, net int) *Store {
 }
 
 func createStoreFromMnemonic(passphrase string, mnemonic string, net int) *Store {
+	keyInfo := []byte{} // TODO, update for testnet
 	ikm, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	exitOnErr(err)
-	parentKey, err := bls.PrivateKeyFromSeed(ikm)
+	parentKey, err := bls.PrivateKeyFromSeed(ikm, keyInfo)
 	exitOnErr(err)
 
 	e := newEncrypter(passphrase, net)
@@ -71,7 +72,7 @@ func createStoreFromMnemonic(passphrase string, mnemonic string, net int) *Store
 		Version:   1,
 		CreatedAt: time.Now(),
 		Network:   net,
-		Encrypted: false,
+		Encrypted: len(passphrase) != 0,
 		Vault: &vault{
 			Seed: seed{
 				Method:     "BIP-39",
@@ -155,7 +156,7 @@ func (s *Store) deriveNewKeySeed(parentSeed []byte) []byte {
 /// 2- Exposing any child key, should not expose parnet key or any other child keys
 
 func (s *Store) derivePrivayeKey(parentKey, keySeed []byte) *bls.PrivateKey {
-	//	keyInfo := []byte{} // TODO, update for testnet
+	keyInfo := []byte{} // TODO, update for testnet
 
 	// To derive a new key, we need:
 	//    1- Parent Key
@@ -167,7 +168,7 @@ func (s *Store) derivePrivayeKey(parentKey, keySeed []byte) *bls.PrivateKey {
 	exitOnErr(err)
 	ikm := hmac512.Sum(nil)
 
-	prv, err := bls.PrivateKeyFromSeed(ikm /*, keyInfo*/)
+	prv, err := bls.PrivateKeyFromSeed(ikm, keyInfo)
 	exitOnErr(err)
 
 	return prv

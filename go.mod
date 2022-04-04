@@ -7,7 +7,7 @@ require (
 	github.com/peterh/liner v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tyler-smith/go-bip39 v1.1.0
-	github.com/zarbchain/zarb-go v0.9.1-0.20220403164918-d5404772224f
+	github.com/zarbchain/zarb-go v0.9.1-0.20220404031026-7ee71e53551e
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	google.golang.org/grpc v1.42.0
 )

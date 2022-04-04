@@ -4,13 +4,27 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math/rand"
 	"strconv"
 
 	"github.com/zarbchain/zarb-go/crypto"
 	"github.com/zarbchain/zarb-go/crypto/bls"
 	"github.com/zarbchain/zarb-go/tx"
+	"github.com/zarbchain/zarb-go/util"
+)
+
+var (
+	/// ErrWalletExits describes an error in which there is a wallet
+	/// exists in the given path
+	ErrWalletExits = errors.New("wallet exists")
+
+	/// ErrWalletExits describes an error in which the wallet CRC is
+	/// invalid
+	ErrInvalidCRC = errors.New("invalid CRC")
+
+	/// ErrWalletExits describes an error in which the network is not
+	/// valid
+	ErrInvalidNetwork = errors.New("invalid network")
 )
 
 type Wallet struct {
@@ -30,7 +44,7 @@ var serversJSON []byte
 
 /// OpenWallet generates an empty wallet and save the seed string
 func OpenWallet(path string) (*Wallet, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := util.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +54,7 @@ func OpenWallet(path string) (*Wallet, error) {
 	exitOnErr(err)
 
 	if s.VaultCRC != s.calcVaultCRC() {
-		exitOnErr(errors.New("invalid CRC"))
+		exitOnErr(ErrInvalidCRC)
 	}
 
 	return newWallet(path, s, true)
@@ -48,13 +62,17 @@ func OpenWallet(path string) (*Wallet, error) {
 
 /// Recover recovers a wallet from mnemonic (seed phrase)
 func RecoverWallet(path, mnemonic string, net int) (*Wallet, error) {
+	path = util.MakeAbs(path)
+	if util.PathExists(path) {
+		return nil, ErrWalletExits
+	}
 	s := RecoverStore(mnemonic, net)
 	w, err := newWallet(path, s, false)
 	if err != nil {
 		return nil, err
 	}
 
-	err = w.SaveToFile()
+	err = w.saveToFile()
 	if err != nil {
 		return nil, err
 	}
@@ -64,13 +82,17 @@ func RecoverWallet(path, mnemonic string, net int) (*Wallet, error) {
 
 /// CreateWallet generates an empty wallet and save the seed string
 func CreateWallet(path, passphrase string, net int) (*Wallet, error) {
+	path = util.MakeAbs(path)
+	if util.PathExists(path) {
+		return nil, ErrWalletExits
+	}
 	s := NewStore(passphrase, net)
 	w, err := newWallet(path, s, false)
 	if err != nil {
 		return nil, err
 	}
 
-	err = w.SaveToFile()
+	err = w.saveToFile()
 	if err != nil {
 		return nil, err
 	}
@@ -107,14 +129,10 @@ func (w *Wallet) connectToRandomServer() error {
 		{ // testnet
 			netServers = serversInfo["testnet"]
 		}
-	// TODO:
-	// case 2:
-	// 	{ // localtest
-	// 		netServers = serversInfo["localtest"]
-	// 	}
+
 	default:
 		{
-			errors.New("invalid network")
+			return ErrInvalidNetwork
 		}
 	}
 
@@ -130,18 +148,21 @@ func (w *Wallet) connectToRandomServer() error {
 
 	return errors.New("unable to connect to the servers")
 }
+func (w *Wallet) Path() string {
+	return w.path
+}
 
 func (w *Wallet) IsEncrypted() bool {
 	return w.store.Encrypted
 }
 
-func (w *Wallet) SaveToFile() error {
+func (w *Wallet) saveToFile() error {
 	w.store.VaultCRC = w.store.calcVaultCRC()
 
 	bs, err := json.Marshal(w.store)
 	exitOnErr(err)
 
-	return ioutil.WriteFile(w.path, bs, 0600)
+	return util.WriteFile(w.path, bs)
 }
 
 func (w *Wallet) ImportPrivateKey(passphrase string, prv *bls.PrivateKey) error {
@@ -149,7 +170,7 @@ func (w *Wallet) ImportPrivateKey(passphrase string, prv *bls.PrivateKey) error 
 	if err != nil {
 		return err
 	}
-	return w.SaveToFile()
+	return w.saveToFile()
 }
 
 func (w *Wallet) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {

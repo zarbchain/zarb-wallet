@@ -12,16 +12,18 @@ func Recover() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
 		c.Before = func() { fmt.Println(ZARB) }
 		c.Action = func() {
-			mnemonic := PromptInput("Mnemonic: ")
+			mnemonic := PromptInput("Seed: ")
 
 			fmt.Println()
 
-			_, err := wallet.RecoverWallet(*path, mnemonic, 0)
+			w, err := wallet.RecoverWallet(*path, mnemonic, 0)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
+			PrintInfoMsg("Wallet recovered successfully at: %s", w.Path())
+			PrintWarnMsg("Never share your private key ever. You will loose all your funds and will never be able to get them back.")
 		}
 	}
 }
