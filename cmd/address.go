@@ -7,23 +7,68 @@ import (
 	"github.com/zarbchain/zarb-wallet/wallet"
 )
 
-// GetPrivateKey returns the private key of an address
-func GetPrivateKey() func(c *cli.Cmd) {
+/// AllAddresses lists all the wallet addresses
+func AllAddresses() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		addressArg := c.String(cli.StringArg{
-			Name: "ADDR",
-			Desc: "Address string",
-		})
-
 		c.Before = func() { fmt.Println(header) }
 		c.Action = func() {
-			passphrase := PromptPassphrase("Passphrase: ", false)
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
+			PrintLine()
+			addrs := w.Addresses()
+			for addr, label := range addrs {
+				PrintInfoMsg("%s %s", addr, label)
+			}
+		}
+	}
+}
+
+/// NewAddress creates a new address
+func NewAddress() func(c *cli.Cmd) {
+	return func(c *cli.Cmd) {
+		c.Before = func() { fmt.Println(header) }
+		c.Action = func() {
+			label := PromptInput("Label: ")
+			w, err := wallet.OpenWallet(*path)
+			if err != nil {
+				PrintDangerMsg(err.Error())
+				return
+			}
+
+			passphrase := getPassphrase(w)
+			addr, err := w.NewAddress(passphrase, label)
+			if err != nil {
+				PrintDangerMsg(err.Error())
+				return
+			}
+
+			PrintLine()
+			PrintInfoMsg("%s", addr)
+		}
+	}
+}
+
+// GetPrivateKey returns the private key of an address
+func GetPrivateKey() func(c *cli.Cmd) {
+	return func(c *cli.Cmd) {
+		addressArg := c.String(cli.StringArg{
+			Name: "ADDR",
+			Desc: "address string",
+		})
+
+		c.Before = func() { fmt.Println(header) }
+		c.Action = func() {
+			w, err := wallet.OpenWallet(*path)
+			if err != nil {
+				PrintDangerMsg(err.Error())
+				return
+			}
+
+			passphrase := getPassphrase(w)
 			prv, err := w.PrivateKey(passphrase, *addressArg)
 			if err != nil {
 				PrintDangerMsg(err.Error())
@@ -31,7 +76,7 @@ func GetPrivateKey() func(c *cli.Cmd) {
 			}
 
 			PrintLine()
-			PrintDangerMsg("Private Key: \"%v\"", prv)
+			PrintWarnMsg("Private Key: \"%v\"", prv)
 		}
 	}
 }
@@ -41,18 +86,18 @@ func GetPublicKey() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
 		addressArg := c.String(cli.StringArg{
 			Name: "ADDR",
-			Desc: "Address string",
+			Desc: "address string",
 		})
 
 		c.Before = func() { fmt.Println(header) }
 		c.Action = func() {
-			passphrase := PromptPassphrase("Passphrase: ", false)
 			w, err := wallet.OpenWallet(*path)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
 			}
 
+			passphrase := getPassphrase(w)
 			pub, err := w.PublicKey(passphrase, *addressArg)
 			if err != nil {
 				PrintDangerMsg(err.Error())
@@ -60,7 +105,7 @@ func GetPublicKey() func(c *cli.Cmd) {
 			}
 
 			PrintLine()
-			PrintDangerMsg("Public Key: \"%v\"", pub)
+			PrintInfoMsg("Public Key: \"%v\"", pub)
 		}
 	}
 }

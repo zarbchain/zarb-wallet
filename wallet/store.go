@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -35,6 +34,7 @@ type vault struct {
 type address struct {
 	Method  string `json:"method"`
 	Address string `json:"address"`
+	Label   string `json:"label"`
 	Params  params `json:"params"`
 }
 
@@ -48,11 +48,11 @@ type keystore struct {
 	Prv []encrypted `json:"prv"`
 }
 
-func RecoverStore(mnemonic string, net int) *Store {
+func RecoverStore(mnemonic string, net int) (*Store, error) {
 	return createStoreFromMnemonic("", mnemonic, net)
 }
 
-func NewStore(passphrase string, net int) *Store {
+func NewStore(passphrase string, net int) (*Store, error) {
 	entropy, err := bip39.NewEntropy(128)
 	exitOnErr(err)
 	mnemonic, err := bip39.NewMnemonic(entropy)
@@ -60,9 +60,12 @@ func NewStore(passphrase string, net int) *Store {
 	return createStoreFromMnemonic(passphrase, mnemonic, net)
 }
 
-func createStoreFromMnemonic(passphrase string, mnemonic string, net int) *Store {
+func createStoreFromMnemonic(passphrase string, mnemonic string, net int) (*Store, error) {
 	keyInfo := []byte{} // TODO, update for testnet
 	parentSeed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
+	if err != nil {
+		return nil, err
+	}
 	exitOnErr(err)
 	parentKey, err := bls.PrivateKeyFromSeed(parentSeed, keyInfo)
 	exitOnErr(err)
@@ -82,8 +85,7 @@ func createStoreFromMnemonic(passphrase string, mnemonic string, net int) *Store
 			},
 		},
 	}
-	s.generateStartKeys(parentSeed, parentKey.Bytes(), 21)
-	return s
+	return s, nil
 }
 
 func (s *Store) calcVaultCRC() uint32 {
@@ -92,10 +94,10 @@ func (s *Store) calcVaultCRC() uint32 {
 	return crc32.ChecksumIEEE(d)
 }
 
-func (s *Store) Addresses() []string {
-	addrs := make([]string, len(s.Vault.Addresses))
-	for i, a := range s.Vault.Addresses {
-		addrs[i] = a.Address
+func (s *Store) Addresses() map[string]string {
+	addrs := make(map[string]string)
+	for _, a := range s.Vault.Addresses {
+		addrs[a.Address] = a.Label
 	}
 
 	return addrs
@@ -120,13 +122,19 @@ func (s *Store) ImportPrivateKey(passphrase string, prv *bls.PrivateKey) error {
 	return nil
 }
 
-func (s *Store) deriveNewKeySeed(parentSeed []byte) []byte {
+func (s *Store) newKeySeed(passphrase string) ([]byte, error) {
+	mnemonic, err := s.Mnemonic(passphrase)
+	if err != nil {
+		return nil, err
+	}
+	parentSeed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
+	exitOnErr(err)
 	data := []byte{0}
 	hmacKey := sha256.Sum256(parentSeed)
 
 	checkKeySeed := func(seed []byte) bool {
 		for _, a := range s.Vault.Addresses {
-			if bytes.Equal(a.Params.GetBytes("seed"), seed) {
+			if safeCmp(seed, a.Params.GetBytes("seed")) {
 				return true
 			}
 		}
@@ -142,7 +150,7 @@ func (s *Store) deriveNewKeySeed(parentSeed []byte) []byte {
 		nextData := hash512[32:]
 
 		if !checkKeySeed(keySeed) {
-			return keySeed
+			return keySeed, nil
 		}
 
 		data = nextData
@@ -153,7 +161,14 @@ func (s *Store) deriveNewKeySeed(parentSeed []byte) []byte {
 /// 1- Deriving Child key seeds from parent seed
 /// 2- Exposing any child key, should not expose parent key or any other child keys
 
-func (s *Store) derivePrivateKey(parentKey, keySeed []byte) *bls.PrivateKey {
+func (s *Store) derivePrivateKey(passphrase string, keySeed []byte) (*bls.PrivateKey, error) {
+	m, err := newEncrypter(passphrase, s.Network).decrypt(s.Vault.Seed.ParentKey)
+	if err != nil {
+		return nil, err
+	}
+	parentKey, err := hex.DecodeString(m)
+	exitOnErr(err)
+
 	keyInfo := []byte{} // TODO, update for testnet
 
 	// To derive a new key, we need:
@@ -162,14 +177,14 @@ func (s *Store) derivePrivateKey(parentKey, keySeed []byte) *bls.PrivateKey {
 	//
 
 	hmac512 := hmac.New(sha512.New, parentKey)
-	_, err := hmac512.Write(keySeed) /// Note #6
+	_, err = hmac512.Write(keySeed)
 	exitOnErr(err)
 	ikm := hmac512.Sum(nil)
 
 	prv, err := bls.PrivateKeyFromSeed(ikm, keyInfo)
 	exitOnErr(err)
 
-	return prv
+	return prv, nil
 }
 
 func (s *Store) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {
@@ -186,12 +201,10 @@ func (s *Store) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {
 					exitOnErr(err)
 					return prv, nil
 				}
-			case "BLS-KDF-CHAIN":
+			case "KDF-CHAIN":
 				{
 					seed := a.Params.GetBytes("seed")
-					parentKey := s.ParentKey(passphrase)
-					prv := s.derivePrivateKey(parentKey, seed)
-					return prv, nil
+					return s.derivePrivateKey(passphrase, seed)
 				}
 			}
 		}
@@ -200,18 +213,28 @@ func (s *Store) PrivateKey(passphrase, addr string) (*bls.PrivateKey, error) {
 	return nil, ErrAddressNotFound
 }
 
-func (s *Store) generateStartKeys(parentSeed, parentKey []byte, count int) {
-	for i := 0; i < count; i++ {
-		seed := s.deriveNewKeySeed(parentSeed)
-		prv := s.derivePrivateKey(parentKey, seed)
-
-		a := address{}
-		a.Address = prv.PublicKey().Address().String()
-		a.Params = newParams()
-		a.Params.SetBytes("seed", seed)
-		a.Method = "BLS-KDF-CHAIN"
-		s.Vault.Addresses = append(s.Vault.Addresses, a)
+func (s *Store) NewAddress(passphrase, label string) (string, error) {
+	keySeed, err := s.newKeySeed(passphrase)
+	if err != nil {
+		return "", err
 	}
+	prv, err := s.derivePrivateKey(passphrase, keySeed)
+	if err != nil {
+		return "", err
+	}
+
+	params := newParams()
+	params.SetBytes("seed", keySeed)
+	a := address{
+		Method:  "KDF-CHAIN",
+		Address: prv.PublicKey().Address().String(),
+		Label:   label,
+		Params:  params,
+	}
+
+	s.Vault.Addresses = append(s.Vault.Addresses, a)
+
+	return a.Address, nil
 }
 
 func (s *Store) Contains(addr crypto.Address) bool {
@@ -227,26 +250,6 @@ func (s *Store) getAddressInfo(addr crypto.Address) *address {
 	return nil
 }
 
-func (s *Store) ParentSeed(passphrase string) []byte {
-	h, err := bip39.NewSeedWithErrorChecking(s.Mnemonic(passphrase), "")
-	exitOnErr(err)
-
-	return h
-}
-
-func (s *Store) Mnemonic(passphrase string) string {
-	m, err := newEncrypter(passphrase, s.Network).decrypt(s.Vault.Seed.ParentSeed)
-	exitOnErr(err)
-
-	return m
-}
-
-func (s *Store) ParentKey(passphrase string) []byte {
-	m, err := newEncrypter(passphrase, s.Network).decrypt(s.Vault.Seed.ParentKey)
-	exitOnErr(err)
-
-	prv, err := hex.DecodeString(m)
-	exitOnErr(err)
-
-	return prv
+func (s *Store) Mnemonic(passphrase string) (string, error) {
+	return newEncrypter(passphrase, s.Network).decrypt(s.Vault.Seed.ParentSeed)
 }

@@ -4,8 +4,6 @@ import (
 	"os"
 
 	cli "github.com/jawher/mow.cli"
-	"github.com/zarbchain/zarb-go/tx"
-	"github.com/zarbchain/zarb-wallet/wallet"
 )
 
 var path *string
@@ -15,17 +13,20 @@ func main() {
 
 	path = app.String(cli.StringOpt{
 		Name:  "w wallet file",
-		Desc:  "A path to the wallet file",
+		Desc:  "a path to the wallet file",
 		Value: ZarbWalletsDir() + "default_wallet",
 	})
 
 	app.Command("create", "Create a new wallet", Generate())
-	app.Command("recover", "Recover waller from mnemonic (seed phrase)", Recover())
-	app.Command("list_addresses", "List of wallet addresses", Addresses())
-	app.Command("get_pubkey", "Get public key of an address", GetPublicKey())
-	app.Command("get_privkey", "Get private key of an address", GetPrivateKey())
-	app.Command("get_seed", "Get seed phrase (mnemonic)", GetSeed())
-	app.Command("import_privkey", "Import a private key into wallet", ImportPrivateKey())
+	app.Command("recover", "Recover waller from the seed phrase (mnemonic)", Recover())
+	app.Command("seed", "Show secret seed phrase (mnemonic) that can be used to recover this wallet", GetSeed())
+	app.Command("address", "Manage address book", func(k *cli.Cmd) {
+		k.Command("new", "Creating a new address", NewAddress())
+		k.Command("all", "Show all addresses", AllAddresses())
+		k.Command("pubkey", "Get public key of an address", GetPublicKey())
+		k.Command("privkey", "Get private key of an address", GetPrivateKey())
+		k.Command("import", "Import a private key into wallet", ImportPrivateKey())
+	})
 	app.Command("tx", "Create, sign and publish a transaction", func(k *cli.Cmd) {
 		k.Command("bond", "Create, sign and publish a bond transaction", BondTx())
 		k.Command("send", "Create, sign and publish a send transaction", SendTx())
@@ -36,48 +37,4 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		panic(err)
 	}
-}
-
-func addCommonTxOptions(c *cli.Cmd) (*string, *string, *string, *string) {
-	stampOpt := c.String(cli.StringOpt{
-		Name: "stamp",
-		Desc: "Transaction stamp, if not specified will query from gRPC server",
-	})
-
-	seqOpt := c.String(cli.StringOpt{
-		Name: "seq",
-		Desc: "Transaction sequence, if not specified will query from gRPC server",
-	})
-	memoOpt := c.String(cli.StringOpt{
-		Name:  "memo",
-		Desc:  "Transaction memo, maximum should be 64 character (optional)",
-		Value: "",
-	})
-	feeOpt := c.String(cli.StringOpt{
-		Name:  "fee",
-		Desc:  "Transaction fee, if not specified will calculate automatically",
-		Value: "",
-	})
-
-	return stampOpt, seqOpt, memoOpt, feeOpt
-}
-
-func signAndPublishTx(w *wallet.Wallet, trx *tx.Tx) {
-	PrintWarnMsg("THIS ACTION IS NOT REVERSIBLE")
-	PromptConfirm("Do you want to continue? ")
-
-	passphrase := getPassphrase(w)
-	res, err := w.SignAndBroadcast(passphrase, trx)
-	if err != nil {
-		PrintDangerMsg("An error occurred: %s", err.Error())
-	}
-	PrintInfoMsg(res)
-}
-
-func getPassphrase(w *wallet.Wallet) string {
-	passphrase := ""
-	if w.IsEncrypted() {
-		passphrase = PromptPassphrase("Wallet password: ", false)
-	}
-	return passphrase
 }

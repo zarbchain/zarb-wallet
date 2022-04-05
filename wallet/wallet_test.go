@@ -23,6 +23,14 @@ func setup(t *testing.T) {
 	assert.False(t, w.IsEncrypted())
 	assert.Equal(t, w.Path(), path)
 
+	// create some test addresses
+	_, err = w.NewAddress(passphrase, "addr-1")
+	assert.NoError(t, err)
+	_, err = w.NewAddress(passphrase, "addr-2")
+	assert.NoError(t, err)
+	_, err = w.NewAddress(passphrase, "addr-3")
+	assert.NoError(t, err)
+
 	tPassphrase = passphrase
 	tWallet = w
 }
@@ -99,9 +107,14 @@ func TestOpenWallet(t *testing.T) {
 func TestRecoverWallet(t *testing.T) {
 	setup(t)
 
-	mnemonic := tWallet.Mnemonic(tPassphrase)
+	mnemonic, _ := tWallet.Mnemonic(tPassphrase)
 	t.Run("Wallet exists", func(t *testing.T) {
 		_, err := RecoverWallet(tWallet.path, mnemonic, 0)
+		assert.Error(t, err)
+	})
+
+	t.Run("Invalid mnemonic", func(t *testing.T) {
+		_, err := RecoverWallet(util.TempFilePath(), "invali mnemonic phrase seed", 0)
 		assert.Error(t, err)
 	})
 
@@ -110,9 +123,15 @@ func TestRecoverWallet(t *testing.T) {
 		assert.NoError(t, err)
 
 		reopenWallet(t)
+		_, err = recovered.NewAddress("", "addr-1")
+		assert.NoError(t, err)
+		_, err = recovered.NewAddress("", "addr-2")
+		assert.NoError(t, err)
+		_, err = recovered.NewAddress("", "addr-3")
+		assert.NoError(t, err)
+
+		assert.Equal(t, tWallet.Addresses(), recovered.Addresses())
 		assert.Equal(t, tWallet.store.VaultCRC, recovered.store.VaultCRC)
-		assert.Equal(t, tWallet.store.ParentSeed(tPassphrase), recovered.store.ParentSeed(""))
-		assert.Equal(t, tWallet.store.ParentKey(tPassphrase), recovered.store.ParentKey(""))
 	})
 }
 
@@ -121,7 +140,7 @@ func TestGetPrivateKey(t *testing.T) {
 
 	addrs := tWallet.Addresses()
 	assert.NotEmpty(t, addrs)
-	for _, addr := range addrs {
+	for addr := range addrs {
 		prvStr, err := tWallet.PrivateKey(tPassphrase, addr)
 		assert.NoError(t, err)
 		prv, _ := bls.PrivateKeyFromString(prvStr)
