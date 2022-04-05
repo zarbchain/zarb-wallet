@@ -142,9 +142,12 @@ func TestGetPrivateKey(t *testing.T) {
 	assert.NotEmpty(t, addrs)
 	for addr := range addrs {
 		prvStr, err := tWallet.PrivateKey(tPassphrase, addr)
+		pubStr, err := tWallet.PublicKey(tPassphrase, addr)
 		assert.NoError(t, err)
 		prv, _ := bls.PrivateKeyFromString(prvStr)
-		assert.Equal(t, prv.PublicKey().Address().String(), addr)
+		pub, _ := bls.PublicKeyFromString(pubStr)
+		assert.True(t, prv.PublicKey().EqualsTo(pub))
+		assert.Equal(t, pub.Address().String(), addr)
 	}
 }
 

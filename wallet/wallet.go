@@ -204,7 +204,20 @@ func (w *Wallet) NewAddress(passphrase, label string) (string, error) {
 	}
 
 	return addr, nil
+}
 
+func (w *Wallet) GetBalance(addrStr string) (int64, int64, error) {
+	addr, err := crypto.AddressFromString(addrStr)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	balance, err := w.client.GetAccountBalance(addr)
+	exitOnErr(err)
+	stake, err := w.client.GetValidatorStake(addr)
+	exitOnErr(err)
+
+	return balance, stake, nil
 }
 
 func (w *Wallet) PrivateKey(passphrase, addr string) (string, error) {

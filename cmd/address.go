@@ -52,10 +52,37 @@ func NewAddress() func(c *cli.Cmd) {
 	}
 }
 
+/// GetBalance shows the balance of an address
+func GetBalance() func(c *cli.Cmd) {
+	return func(c *cli.Cmd) {
+		addrArg := c.String(cli.StringArg{
+			Name: "ADDR",
+			Desc: "address string",
+		})
+
+		c.Before = func() { fmt.Println(header) }
+		c.Action = func() {
+			w, err := wallet.OpenWallet(*path)
+			if err != nil {
+				PrintDangerMsg(err.Error())
+				return
+			}
+
+			PrintLine()
+			balance, stake, err := w.GetBalance(*addrArg)
+			if err != nil {
+				PrintDangerMsg(err.Error())
+				return
+			}
+			PrintInfoMsg("balance: %v, stake: %v", balance, stake)
+		}
+	}
+}
+
 // GetPrivateKey returns the private key of an address
 func GetPrivateKey() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		addressArg := c.String(cli.StringArg{
+		addrArg := c.String(cli.StringArg{
 			Name: "ADDR",
 			Desc: "address string",
 		})
@@ -69,7 +96,7 @@ func GetPrivateKey() func(c *cli.Cmd) {
 			}
 
 			passphrase := getPassphrase(w)
-			prv, err := w.PrivateKey(passphrase, *addressArg)
+			prv, err := w.PrivateKey(passphrase, *addrArg)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return
@@ -84,7 +111,7 @@ func GetPrivateKey() func(c *cli.Cmd) {
 // GetPrivateKey returns the public key of an address
 func GetPublicKey() func(c *cli.Cmd) {
 	return func(c *cli.Cmd) {
-		addressArg := c.String(cli.StringArg{
+		addrArg := c.String(cli.StringArg{
 			Name: "ADDR",
 			Desc: "address string",
 		})
@@ -98,7 +125,7 @@ func GetPublicKey() func(c *cli.Cmd) {
 			}
 
 			passphrase := getPassphrase(w)
-			pub, err := w.PublicKey(passphrase, *addressArg)
+			pub, err := w.PublicKey(passphrase, *addrArg)
 			if err != nil {
 				PrintDangerMsg(err.Error())
 				return

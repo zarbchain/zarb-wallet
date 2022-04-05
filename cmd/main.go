@@ -23,6 +23,7 @@ func main() {
 	app.Command("address", "Manage address book", func(k *cli.Cmd) {
 		k.Command("new", "Creating a new address", NewAddress())
 		k.Command("all", "Show all addresses", AllAddresses())
+		k.Command("balance", "Show the balance of an address", GetBalance())
 		k.Command("pubkey", "Get public key of an address", GetPublicKey())
 		k.Command("privkey", "Get private key of an address", GetPrivateKey())
 		k.Command("import", "Import a private key into wallet", ImportPrivateKey())
