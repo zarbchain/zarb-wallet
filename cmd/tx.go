@@ -197,7 +197,10 @@ func addCommonTxOptions(c *cli.Cmd) (*string, *string, *string, *string) {
 
 func signAndPublishTx(w *wallet.Wallet, trx *tx.Tx) {
 	PrintWarnMsg("THIS ACTION IS NOT REVERSIBLE")
-	PromptConfirm("Do you want to continue? ")
+	confirmed := PromptConfirm("Do you want to continue? ")
+	if !confirmed {
+		return
+	}
 
 	passphrase := getPassphrase(w)
 	res, err := w.SignAndBroadcast(passphrase, trx)

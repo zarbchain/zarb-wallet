@@ -104,6 +104,11 @@ func (s *Store) Addresses() map[string]string {
 }
 
 func (s *Store) ImportPrivateKey(passphrase string, prv *bls.PrivateKey) error {
+	/// Decrypt parnet key to make sure the passphrase is correct
+	_, err := s.parentKey(passphrase)
+	if err != nil {
+		return err
+	}
 	if s.Contains(prv.PublicKey().Address()) {
 		return ErrAddressExists
 	}
@@ -162,12 +167,10 @@ func (s *Store) newKeySeed(passphrase string) ([]byte, error) {
 /// 2- Exposing any child key, should not expose parent key or any other child keys
 
 func (s *Store) derivePrivateKey(passphrase string, keySeed []byte) (*bls.PrivateKey, error) {
-	m, err := newEncrypter(passphrase, s.Network).decrypt(s.Vault.Seed.ParentKey)
+	parentKey, err := s.parentKey(passphrase)
 	if err != nil {
 		return nil, err
 	}
-	parentKey, err := hex.DecodeString(m)
-	exitOnErr(err)
 
 	keyInfo := []byte{} // TODO, update for testnet
 
@@ -252,4 +255,15 @@ func (s *Store) getAddressInfo(addr crypto.Address) *address {
 
 func (s *Store) Mnemonic(passphrase string) (string, error) {
 	return newEncrypter(passphrase, s.Network).decrypt(s.Vault.Seed.ParentSeed)
+}
+
+func (s *Store) parentKey(passphrase string) ([]byte, error) {
+	m, err := newEncrypter(passphrase, s.Network).decrypt(s.Vault.Seed.ParentKey)
+	if err != nil {
+		return nil, err
+	}
+	parentKey, err := hex.DecodeString(m)
+	exitOnErr(err)
+
+	return parentKey, nil
 }

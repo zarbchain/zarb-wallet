@@ -212,10 +212,10 @@ func (w *Wallet) GetBalance(addrStr string) (int64, int64, error) {
 		return 0, 0, err
 	}
 
-	balance, err := w.client.GetAccountBalance(addr)
-	exitOnErr(err)
-	stake, err := w.client.GetValidatorStake(addr)
-	exitOnErr(err)
+	balance, _ := w.client.GetAccountBalance(addr)
+	//exitOnErr(err)
+	stake, _ := w.client.GetValidatorStake(addr)
+	//exitOnErr(err)
 
 	return balance, stake, nil
 }
@@ -331,7 +331,7 @@ func (w *Wallet) MakeSendTx(stampStr, seqStr, senderStr, receiverStr, amountStr,
 	if err != nil {
 		return nil, err
 	}
-	receiver, err := crypto.AddressFromString(senderStr)
+	receiver, err := crypto.AddressFromString(receiverStr)
 	if err != nil {
 		return nil, err
 	}
@@ -420,6 +420,8 @@ func (w *Wallet) SignAndBroadcast(passphrase string, tx *tx.Tx) (string, error) 
 	if err != nil {
 		return "", err
 	}
+
+	//fmt.Printf("%x", b)
 
 	return w.client.SendTx(b)
 }
