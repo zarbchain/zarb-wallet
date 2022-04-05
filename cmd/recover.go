@@ -38,7 +38,7 @@ func GetSeed() func(c *cli.Cmd) {
 			}
 
 			passphrase := getPassphrase(w)
-			mnemonic := w.Mnemonic(passphrase)
+			mnemonic, err := w.Mnemonic(passphrase)
 
 			PrintLine()
 			PrintInfoMsg("Seed: \"%v\"", mnemonic)

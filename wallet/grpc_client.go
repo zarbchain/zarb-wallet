@@ -34,6 +34,15 @@ func (c *GrpcClient) GetStamp() (hash.Stamp, error) {
 	return h.Stamp(), nil
 }
 
+func (c *GrpcClient) GetAccountBalance(addr crypto.Address) (int64, error) {
+	acc, err := c.client.GetAccount(context.Background(), &zarb.AccountRequest{Address: addr.Bytes()})
+	if err != nil {
+		return 0, err
+	}
+
+	return acc.Account.Balance, nil
+}
+
 func (c *GrpcClient) GetAccountSequence(addr crypto.Address) (int32, error) {
 	acc, err := c.client.GetAccount(context.Background(), &zarb.AccountRequest{Address: addr.Bytes()})
 	if err != nil {
@@ -50,6 +59,15 @@ func (c *GrpcClient) GetValidatorSequence(addr crypto.Address) (int32, error) {
 	}
 
 	return val.Validator.Sequence + 1, nil
+}
+
+func (c *GrpcClient) GetValidatorStake(addr crypto.Address) (int64, error) {
+	val, err := c.client.GetValidator(context.Background(), &zarb.ValidatorRequest{Address: addr.Bytes()})
+	if err != nil {
+		return 0, err
+	}
+
+	return val.Validator.Stake, nil
 }
 
 func (c *GrpcClient) SendTx(payload []byte) (string, error) {

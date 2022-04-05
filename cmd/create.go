@@ -19,7 +19,11 @@ func Generate() func(c *cli.Cmd) {
 				return
 			}
 
-			mnemonic := w.Mnemonic(passphrase)
+			mnemonic, err := w.Mnemonic(passphrase)
+			if err != nil {
+				PrintDangerMsg(err.Error())
+				return
+			}
 
 			PrintLine()
 			PrintSuccessMsg("Wallet created successfully at: %s", w.Path())

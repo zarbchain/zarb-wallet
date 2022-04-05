@@ -75,7 +75,10 @@ func RecoverWallet(path, mnemonic string, net int) (*Wallet, error) {
 	if util.PathExists(path) {
 		return nil, ErrWalletExits
 	}
-	s := RecoverStore(mnemonic, net)
+	s, err := RecoverStore(mnemonic, net)
+	if err != nil {
+		return nil, err
+	}
 	w, err := newWallet(path, s, false)
 	if err != nil {
 		return nil, err
@@ -95,7 +98,10 @@ func CreateWallet(path, passphrase string, net int) (*Wallet, error) {
 	if util.PathExists(path) {
 		return nil, ErrWalletExits
 	}
-	s := NewStore(passphrase, net)
+	s, err := NewStore(passphrase, net)
+	if err != nil {
+		return nil, err
+	}
 	w, err := newWallet(path, s, false)
 	if err != nil {
 		return nil, err
@@ -187,6 +193,33 @@ func (w *Wallet) ImportPrivateKey(passphrase string, prvStr string) error {
 	return w.saveToFile()
 }
 
+func (w *Wallet) NewAddress(passphrase, label string) (string, error) {
+	addr, err := w.store.NewAddress(passphrase, label)
+	if err != nil {
+		return "", err
+	}
+	err = w.saveToFile()
+	if err != nil {
+		return "", err
+	}
+
+	return addr, nil
+}
+
+func (w *Wallet) GetBalance(addrStr string) (int64, int64, error) {
+	addr, err := crypto.AddressFromString(addrStr)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	balance, err := w.client.GetAccountBalance(addr)
+	exitOnErr(err)
+	stake, err := w.client.GetValidatorStake(addr)
+	exitOnErr(err)
+
+	return balance, stake, nil
+}
+
 func (w *Wallet) PrivateKey(passphrase, addr string) (string, error) {
 	prv, err := w.store.PrivateKey(passphrase, addr)
 	if err != nil {
@@ -203,11 +236,11 @@ func (w *Wallet) PublicKey(passphrase, addr string) (string, error) {
 	return prv.PublicKey().String(), nil
 }
 
-func (w *Wallet) Mnemonic(passphrase string) string {
+func (w *Wallet) Mnemonic(passphrase string) (string, error) {
 	return w.store.Mnemonic(passphrase)
 }
 
-func (w *Wallet) Addresses() []string {
+func (w *Wallet) Addresses() map[string]string {
 	return w.store.Addresses()
 }
 
